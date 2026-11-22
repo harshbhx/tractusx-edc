@@ -1,0 +1,26 @@
+name: fork-3080-check
+on:
+  push:
+    branches: [ci/3080-lint]
+jobs:
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: |
+          for c in tractusx-connector tractusx-connector-memory; do
+            helm dependency build charts/$c || true
+            helm lint charts/$c
+            helm template t charts/$c --set log4j2.enableJsonLogs=true > /tmp/$c.yaml
+          done
+          python3 - <<'PY'
+          import yaml, json
+          for c in ["tractusx-connector","tractusx-connector-memory"]:
+              d = yaml.safe_load(open(f"charts/{c}/values.yaml"))
+              cfg = yaml.safe_load(d["log4j2"]["config"])
+              t = json.loads(cfg["Appenders"]["Console"]["JsonTemplateLayout"]["eventTemplate"])
+              assert "exception" in t, c
+              print(c, list(t))
+          PY
+      - run: grep -l '"exception"' /tmp/tractusx-connector*.yaml
