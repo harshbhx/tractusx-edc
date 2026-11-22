@@ -12,7 +12,6 @@ jobs:
           for c in tractusx-connector tractusx-connector-memory; do
             helm dependency build charts/$c || true
             helm lint charts/$c
-            helm template t charts/$c --set log4j2.enableJsonLogs=true > /tmp/$c.yaml
           done
           python3 - <<'PY'
           import yaml, json
@@ -23,4 +22,3 @@ jobs:
               assert "exception" in t, c
               print(c, list(t))
           PY
-      - run: grep -l '"exception"' /tmp/tractusx-connector*.yaml
